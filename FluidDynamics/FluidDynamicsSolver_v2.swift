@@ -73,10 +73,14 @@ static func fluidDynamicsStep() -> [Double]
         }
     }
     
+    let velStartTime : CFAbsoluteTime = CFAbsoluteTimeGetCurrent();
     velocitySolver();
+    let velStopTime = CFAbsoluteTimeGetCurrent()
     densitySolver();
+    let densityStopTime = CFAbsoluteTimeGetCurrent()
     
     println("CFD SOLVE:" + NSString(format: "%.4f", CFAbsoluteTimeGetCurrent() - startTime));
+    println("Velocity Solver Time = \(velStopTime - velStartTime)  Density Solver Time = \(densityStopTime - velStopTime)")
     
     return d;
 }
