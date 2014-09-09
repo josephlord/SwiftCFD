@@ -18,6 +18,7 @@
 //  http://blog.human-friendly.com/
 
 import Foundation
+import Accelerate
 
 let GRID_WIDTH = 200;
 let GRID_HEIGHT = 200;
@@ -222,8 +223,12 @@ func advect (b:Int, #d0:[Double], #du:[Double], #dv:[Double]) -> [Double]
 // project is always on u and v....
 func project(u uIn:[Double], v vIn:[Double])->(u:[Double], v:[Double])
 {
-    var p = [Double](count: CELL_COUNT, repeatedValue: 0);
+    let p = [Double](count: CELL_COUNT, repeatedValue: 0);
     var div = [Double](count: CELL_COUNT, repeatedValue: 0);
+    
+    var multiplier = -0.5 * DBL_GRID_HEIGHT
+    
+    
     for j in 0..<GRID_HEIGHT
     {
         for i in 0..<GRID_WIDTH
@@ -235,20 +240,17 @@ func project(u uIn:[Double], v vIn:[Double])->(u:[Double], v:[Double])
             let bottom = index + LINE_STRIDE;
             
             div[index] = (uIn[right] - uIn[left] + vIn[bottom] - vIn[top]) * -0.5 / DBL_GRID_HEIGHT;
-            
-            p[index] = Double(0.0);
         }
-        
     }
     
     div = setBoundry(0, x: div);
-    p = setBoundry(0, x: p);
+    let p1 = setBoundry(0, x: p);
     
-    p = linearSolver(0, x: p, x0: div, a: 1, c: 4);
+    let p2 = linearSolver(0, x: p1, x0: div, a: 1, c: 4);
     
     var u = [Double](count: CELL_COUNT, repeatedValue: 0);
     var v = [Double](count: CELL_COUNT, repeatedValue: 0);
-    
+
     for j in 0..<GRID_HEIGHT
     {
         for i in 0..<GRID_WIDTH
@@ -259,8 +261,8 @@ func project(u uIn:[Double], v vIn:[Double])->(u:[Double], v:[Double])
             let top = index - LINE_STRIDE;
             let bottom = index + LINE_STRIDE;
             
-            u[index] -= 0.5 * DBL_GRID_HEIGHT * (p[right] - p[left]);
-            v[index] -= 0.5 * DBL_GRID_HEIGHT * (p[bottom] - p[top]);
+            u[index] -= 0.5 * DBL_GRID_HEIGHT * (p2[right] - p2[left]);
+            v[index] -= 0.5 * DBL_GRID_HEIGHT * (p2[bottom] - p2[top]);
         }
     }
     
@@ -389,7 +391,7 @@ func buoyancy(d:[Double])->[Double]
 
 func linearSolver(b:Int, #x:[Double], #x0:[Double], #a:Double, #c:Double) -> [Double]
 {
-    var returnArray = [Double](count: CELL_COUNT, repeatedValue: 0.0)
+    var returnArray = x
     
     for var k = 0; k < linearSolverIterations ; k++
     {
@@ -403,7 +405,7 @@ func linearSolver(b:Int, #x:[Double], #x0:[Double], #a:Double, #c:Double) -> [Do
                 let top = index - LINE_STRIDE;
                 let bottom = index + LINE_STRIDE;
                 
-                returnArray[index] = (a * ( x[left] + x[right] + x[top] + x[bottom]) + x0[index]) / c;
+                returnArray[index] = (a * ( returnArray[left] + returnArray[right] + returnArray[top] + returnArray[bottom]) + x0[index]) / c;
             }
         }
         returnArray = setBoundry(b, x: returnArray);
@@ -472,22 +474,26 @@ func curlf(i:Int, #j:Int, #u: [Double], #v: [Double]) -> Double
 func addSourceUV(uOld: [Double], vOld:[Double], u:[Double], v:[Double])->(u: [Double], v: [Double]) {
     var uOut = [Double](count: CELL_COUNT, repeatedValue: 0);
     var vOut = [Double](count: CELL_COUNT, repeatedValue: 0);
-    for var i = CELL_COUNT - 1; i >= 0; i--
+    var dtVar = dt
+    vDSP_vsmaD(uOld, 1, &dtVar, u, 1, &uOut, 1, UInt(uOut.count))
+    vDSP_vsmaD(vOld, 1, &dtVar, v, 1, &vOut, 1, UInt(vOut.count))
+/*    for var i = CELL_COUNT - 1; i >= 0; i--
     {
         uOut[i] = u[i] + dt * uOld[i];
         vOut[i] = v[i] + dt * vOld[i];
-    }
+    }*/
     return (u: uOut, v: vOut)
 }
 
 private func addSource(x:[Double], #x0:[Double]) -> [Double]
 {
     var returnArray = [Double](count: CELL_COUNT, repeatedValue: 0.0)
-    
-    for var i = CELL_COUNT - 1; i >= 0; i--
+    var dtVar = dt
+    vDSP_vsmaD(x0, 1, &dtVar, x, 1, &returnArray, 1, UInt(returnArray.count))
+/*    for var i = CELL_COUNT - 1; i >= 0; i--
     {
         returnArray[i] = x[i] + dt * x0[i];
-    }
+    }*/
     
     return returnArray;
 }
