@@ -38,11 +38,8 @@ class FluidDynamicsSolver_v2
 final var frameNumber : Int = 0;
 
 final var d = [Double](count: CELL_COUNT, repeatedValue: 0);
-// static var dOld = [Double](count: CELL_COUNT, repeatedValue: 0);
 final var u = [Double](count: CELL_COUNT, repeatedValue: 0);
-    //static var uOld = [Double](count: CELL_COUNT, repeatedValue: 0);
 final var v = [Double](count: CELL_COUNT, repeatedValue: 0);
-    //static var vOld = [Double](count: CELL_COUNT, repeatedValue: 0);
 final var curl = [Double](count: CELL_COUNT, repeatedValue: 0);
 
 final func fluidDynamicsStep() -> [Double]
@@ -137,14 +134,11 @@ func advectUV(#uOld:[Double], #vOld:[Double], #u: [Double], #v: [Double])->(u: [
     var uOut = [Double](count: CELL_COUNT, repeatedValue: 0);
     var vOut = [Double](count: CELL_COUNT, repeatedValue: 0);
     
-    //for var i = GRID_HEIGHT; i >= 1; i--
     for j in 0..<GRID_HEIGHT
     {
-        //for var j = GRID_HEIGHT; j >= 1; j--
         for i in 0..<GRID_WIDTH
         {
             let index = getIndex(i, j :j);
-            //let index = GRID_WIDTH * j + i
             
             var x = Double(i) - dt0x * uOld[index];
             var y = Double(j) - dt0y * vOld[index];
@@ -184,10 +178,8 @@ func advect (b:Int, #d0:[Double], #du:[Double], #dv:[Double]) -> [Double]
     let dt0x = dt * DBL_GRID_WIDTH;
     let dt0y = dt * DBL_GRID_HEIGHT;
 
-    //for var i = GRID_HEIGHT; i >= 1; i--
     for j in 0..<GRID_HEIGHT
     {
-        //        for var j = GRID_HEIGHT; j >= 1; j--
         for i in 0..<GRID_WIDTH
         {
             let index = getIndex(i, j: j);
@@ -232,10 +224,8 @@ func project(u uIn:[Double], v vIn:[Double])->(u:[Double], v:[Double])
 {
     var p = [Double](count: CELL_COUNT, repeatedValue: 0);
     var div = [Double](count: CELL_COUNT, repeatedValue: 0);
-    //for var j = GRID_HEIGHT; j >= 1; j--
     for j in 0..<GRID_HEIGHT
     {
-        //for var i = GRID_WIDTH; i >= 1; i--
         for i in 0..<GRID_WIDTH
         {
             let index = getIndex(i, j : j);
@@ -259,10 +249,8 @@ func project(u uIn:[Double], v vIn:[Double])->(u:[Double], v:[Double])
     var u = [Double](count: CELL_COUNT, repeatedValue: 0);
     var v = [Double](count: CELL_COUNT, repeatedValue: 0);
     
-    //for var j = GRID_HEIGHT; j >= 1; j--
     for j in 0..<GRID_HEIGHT
     {
-        //            for var i = GRID_WIDTH; i >= 1; i--
         for i in 0..<GRID_WIDTH
         {
             let index = getIndex(i, j : j);
@@ -291,10 +279,9 @@ func diffuseUV(#uOld:[Double], #vOld:[Double], #u:[Double], #v:[Double])->(u: [D
     
     for var k = 0; k < linearSolverIterations ; k++
     {
-        //for var i = GRID_WIDTH; i >= 1; i--
+
         for j in 0..<GRID_HEIGHT
         {
-            //for var j = GRID_HEIGHT; j >= 1; j--
             for i in 0..<GRID_WIDTH
             {
                 let index = getIndex(i, j: j);
@@ -327,10 +314,8 @@ func vorticityConfinement(#u:[Double], #v:[Double], #curl:[Double])->(uReturn:[D
     var uReturn = [Double](count: CELL_COUNT, repeatedValue: 0);
     var vReturn = [Double](count: CELL_COUNT, repeatedValue: 0);
     var curlReturn = [Double](count: CELL_COUNT, repeatedValue: 0);
-    //for var i = GRID_WIDTH; i >= 1; i--
     for j in 0..<GRID_HEIGHT
     {
-        //        for var j = GRID_HEIGHT; j >= 1; j--
         for i in 0..<GRID_WIDTH
         {
             let tt=curlf(i, j: j, u: u, v: v)
@@ -338,10 +323,8 @@ func vorticityConfinement(#u:[Double], #v:[Double], #curl:[Double])->(uReturn:[D
         }
     }
     
-    //for var i = 2; i < GRID_WIDTH; i++
     for j in 0..<GRID_HEIGHT
     {
-        //for var j = 2; j < GRID_HEIGHT; j++
         for i in 0..<GRID_WIDTH
         {
             let index = getIndex(i, j: j);
@@ -370,30 +353,7 @@ func vorticityConfinement(#u:[Double], #v:[Double], #curl:[Double])->(uReturn:[D
     return (uReturn: uReturn, vReturn: vReturn, cReturn: curlReturn)
 }
 
-/*
-static func swapD()
-{
-    let tmp = d;
-    d = dOld;
-    dOld = tmp;
-}
 
-static func swapU()
-{
-    let tmp = u;
-    u = uOld;
-    uOld = tmp;
-}
-
-static func swapV()
-{
-    let tmp = v;
-    v = vOld;
-    vOld = tmp;
-}
-
-}
-*/
 // buoyancy always on vOld...
 func buoyancy(d:[Double])->[Double]
 {
@@ -412,13 +372,11 @@ func buoyancy(d:[Double])->[Double]
     }
     
     // get average temperature
-    Tamb /= Double(CELL_COUNT);
+    Tamb /= Double(GRID_WIDTH * GRID_HEIGHT);
     
     // for each cell compute buoyancy force
-    //for var i = GRID_WIDTH; i >= 1; i--
     for j in 0..<GRID_WIDTH
     {
-        //        for var j = GRID_HEIGHT; j >= 1; j--
         for i in 0..<GRID_HEIGHT
         {
             let index = getIndex(i, j: j);
@@ -429,24 +387,14 @@ func buoyancy(d:[Double])->[Double]
     return returnV
 }
 
-
-// This costs 2 full array copies!!!
-func swap(inout a:[Double], inout b:[Double]) {
-    let tmp = a
-    a = b
-    b = tmp
-}
-
 func linearSolver(b:Int, #x:[Double], #x0:[Double], #a:Double, #c:Double) -> [Double]
 {
     var returnArray = [Double](count: CELL_COUNT, repeatedValue: 0.0)
     
     for var k = 0; k < linearSolverIterations ; k++
     {
-        //for var i = GRID_WIDTH; i >= 1; i--
         for j in 0..<GRID_HEIGHT
         {
-            //for var j = GRID_HEIGHT; j >= 1; j--
             for i in 0..<GRID_WIDTH
             {
                 let index = getIndex(i, j: j);
